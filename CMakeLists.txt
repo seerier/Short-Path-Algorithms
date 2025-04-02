@@ -6,3 +6,5 @@ set(CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED true)
 
 add_executable(Dijkstra dijkstra.cpp)
+add_executable(D d.cpp)
+add_executable(A a.cpp)

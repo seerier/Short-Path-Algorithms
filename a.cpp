@@ -18,18 +18,18 @@ struct hash_pair {
     }
 };
 
-// Dijkstra 节点结构
+// A* 节点结构
 struct Node {
     int x, y;
-    double g; // 从起点到当前节点的路径代价
+    double g, h, f;
     bool operator>(const Node& other) const {
-        return g > other.g; // 优先队列基于 g 值排序
+        return f > other.f; // 优先队列基于 f 值排序
     }
 };
 
-class Dijkstra {
+class AStar {
 public:
-    Dijkstra(int width, int height, pair<int, int> start, pair<int, int> goal)
+    AStar(int width, int height, pair<int, int> start, pair<int, int> goal)
         : width(width), height(height), start(start), goal(goal) {
         grid = vector<vector<int>>(width, vector<int>(height, 0)); // 0: 可通行
     }
@@ -39,37 +39,36 @@ public:
     }
 
     bool findPath() {
-        // 使用最小优先队列来实现Dijkstra算法
         priority_queue<Node, vector<Node>, greater<Node>> openList;
         unordered_map<pair<int, int>, double, hash_pair> g_score;
         unordered_map<pair<int, int>, pair<int, int>, hash_pair> came_from;
 
         g_score[start] = 0;
-        openList.push({start.first, start.second, 0}); // 将起点加入队列
+        openList.push({start.first, start.second, 0, heuristic(start.first, start.second), heuristic(start.first, start.second)});
 
         while (!openList.empty()) {
             Node current = openList.top();
             openList.pop();
 
             if (make_pair(current.x, current.y) == goal) {
-                reconstructPath(came_from); // 找到目标点，重建路径
+                reconstructPath(came_from);
                 return true;
             }
 
-            // 处理当前节点的邻居
             for (auto d : directions) {
                 int nx = current.x + d.first, ny = current.y + d.second;
-                if (!isValid(nx, ny)) continue; // 检查邻居是否合法
+                if (!isValid(nx, ny)) continue;
 
-                double tentative_g = g_score[{current.x, current.y}] + 1; // 计算新路径代价
+                double tentative_g = g_score[{current.x, current.y}] + 1;
                 if (g_score.find({nx, ny}) == g_score.end() || tentative_g < g_score[{nx, ny}]) {
-                    g_score[{nx, ny}] = tentative_g; // 更新路径代价
-                    openList.push({nx, ny, tentative_g}); // 将邻居加入队列
-                    came_from[{nx, ny}] = {current.x, current.y}; // 记录路径
+                    g_score[{nx, ny}] = tentative_g;
+                    double h = heuristic(nx, ny);
+                    openList.push({nx, ny, tentative_g, h, tentative_g + h});
+                    came_from[{nx, ny}] = {current.x, current.y};
                 }
             }
         }
-        return false; // 如果队列为空且未找到目标点，表示无路径
+        return false; // 无路径
     }
 
     bool addObstacleAndFind(int x, int y) {
@@ -80,7 +79,11 @@ public:
 private:
     int width, height;
     pair<int, int> start, goal;
-    vector<vector<int>> grid; // 0: 可通行，1: 障碍物
+    vector<vector<int>> grid;
+
+    double heuristic(int x, int y) {
+        return abs(x - goal.first) + abs(y - goal.second); // 曼哈顿距离
+    }
 
     bool isValid(int x, int y) {
         return x >= 0 && x < width && y >= 0 && y < height && grid[x][y] == 0;
@@ -104,16 +107,17 @@ private:
     }
 };
 
+// 主函数
 int main() {
     pair<int, int> start = {0, 0};
     pair<int, int> goal = {4, 4};
-    Dijkstra dijkstra(5, 5, start, goal);
+    AStar astar(5, 5, start, goal);
 
     auto start_time = std::chrono::high_resolution_clock::now();  // Start Time
 
-    dijkstra.addObstacleAndFind(2, 2);
-    dijkstra.addObstacleAndFind(2, 3);
-    dijkstra.addObstacleAndFind(2, 4);
+    astar.addObstacleAndFind(2, 2);
+    astar.addObstacleAndFind(2, 3);
+    astar.addObstacleAndFind(2, 4);
 
     auto end_time = std::chrono::high_resolution_clock::now();  // End time
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
